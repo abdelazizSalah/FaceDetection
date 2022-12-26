@@ -10,6 +10,7 @@ cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 
 # detecting the faces, we should try many scales till we reach the best one.
+# params are: img, scale -> to which the img is gonna shrink, minNeighbors which are the number of weak classifiers that can conclude that there is a face here .
 detected_faces = face_cascade.detectMultiScale(img, 1.2, 4)
 
 # drawing the rectangle around the detected faces
