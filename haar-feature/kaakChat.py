@@ -29,8 +29,6 @@ while cap.isOpened():
 
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
-    negative = 1
-
     # Region of Image (ROI), where we want to insert logo
     # roi = img[-size-10:-10, -size-10:-10]
     # it takes the positions where you want to put the logo, but it must be the same size of the logo
