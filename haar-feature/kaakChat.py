@@ -11,10 +11,12 @@ cap = cv2.VideoCapture(0)
 
 # Read logo and resize
 path = './filters/'
-logo = cv2.imread(path+'hats/chicken.png')
+logo = cv2.imread(path+'hats/rabbit-ears.png')
 fromY = 0
 toY = 0
 up = 1
+imgToBeShown = 0
+stillImg = True
 
 while cap.isOpened():
     # Capture frame-by-frame
@@ -22,6 +24,8 @@ while cap.isOpened():
 
     # detecting the face
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # if(stillImg == False):
+    #     img = gray
 
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
@@ -58,7 +62,7 @@ while cap.isOpened():
         roi[np.where(mask)] = 0
         roi += logo
 
-        cv2.imshow('WebCam', img)
+        cv2.imshow('WebCam', gray)
         if cv2.waitKey(1) == ord('q'):
             # When everything done, release the capture
             cap.release()
@@ -92,5 +96,15 @@ while cap.isOpened():
             up = 0
             logo = cv2.imread(path+'beards/m2ashaBeard.png')
         elif cv2.waitKey(1) == ord('c'):
+            up = 0
+            logo = cv2.imread(path+'beards/santa-beard.png')
+
+        elif cv2.waitKey(1) == ord('w'):
+            imgToBeShown = gray
+            stillImg = False
+        elif cv2.waitKey(1) == ord('e'):
+            up = 0
+            logo = cv2.imread(path+'beards/santa-beard.png')
+        elif cv2.waitKey(1) == ord('r'):
             up = 0
             logo = cv2.imread(path+'beards/santa-beard.png')
