@@ -8,10 +8,13 @@ face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 # Setup camera
 cap = cv2.VideoCapture(0)
 
-# Read logo and resize
-path = './filters/hats/'
-logo = cv2.imread(path+'chicken.png')
 
+# Read logo and resize
+path = './filters/'
+logo = cv2.imread(path+'hats/chicken.png')
+fromY = 0
+toY = 0
+up = 1
 
 while cap.isOpened():
     # Capture frame-by-frame
@@ -22,7 +25,8 @@ while cap.isOpened():
 
     faces = face_cascade.detectMultiScale(gray, 1.1, 4)
 
-    upOrDown = 1
+    negative = 1
+
     # Region of Image (ROI), where we want to insert logo
     # roi = img[-size-10:-10, -size-10:-10]
     # it takes the positions where you want to put the logo, but it must be the same size of the logo
@@ -39,7 +43,16 @@ while cap.isOpened():
         ret, mask = cv2.threshold(img2gray, 1, 255, cv2.THRESH_BINARY)
 
         # roi = img[topLeftY - size:topLeftY, leftPosX:leftPosX + size]
-        roi = img[topLeftY - size:topLeftY, leftPosX:leftPosX + size]
+
+        if(up == 1):
+            fromY = topLeftY - size
+            toY = topLeftY
+        else:
+            fromY = topLeftY + height
+            toY = topLeftY + height + size
+
+        roi = img[fromY:toY, leftPosX:leftPosX + size]
+        # roi = img[leftPosX:leftPosX + size, fromY:toY]
 
         # Set an index of where the mask is
         roi[np.where(mask)] = 0
@@ -52,16 +65,32 @@ while cap.isOpened():
             cv2.destroyAllWindows()
         elif cv2.waitKey(1) == ord('a'):
             print('clown')
-            logo = cv2.imread(path+'clown-hat.png')
+            logo = cv2.imread(path+'hats/clown-hat.png')
+            up = 1
         elif cv2.waitKey(1) == ord('s'):
-            logo = cv2.imread(path+'birthday-hat.png')
+            logo = cv2.imread(path+'hats/birthday-hat.png')
+            up = 1
         elif cv2.waitKey(1) == ord('d'):
-            logo = cv2.imread(path+'complete-clown-hat.png')
+            up = 1
+            logo = cv2.imread(path+'hats/complete-clown-hat.png')
         elif cv2.waitKey(1) == ord('f'):
-            logo = cv2.imread(path+'crying-frog-hat.png')
+            up = 1
+            logo = cv2.imread(path+'hats/crying-frog-hat.png')
         elif cv2.waitKey(1) == ord('g'):
-            logo = cv2.imread(path+'kings-crown.png')
+            up = 1
+            logo = cv2.imread(path+'hats/kings-crown.png')
         elif cv2.waitKey(1) == ord('h'):
-            logo = cv2.imread(path+'pig-hat.png')
+            up = 1
+            logo = cv2.imread(path+'hats/pig-hat.png')
         elif cv2.waitKey(1) == ord('j'):
-            logo = cv2.imread(path+'wizzard-hat.png')
+            up = 1
+            logo = cv2.imread(path+'hats/wizzard-hat.png')
+        elif cv2.waitKey(1) == ord('z'):
+            up = 0
+            logo = cv2.imread(path+'beards/long-beard.png')
+        elif cv2.waitKey(1) == ord('x'):
+            up = 0
+            logo = cv2.imread(path+'beards/m2ashaBeard.png')
+        elif cv2.waitKey(1) == ord('c'):
+            up = 0
+            logo = cv2.imread(path+'beards/santa-beard.png')
