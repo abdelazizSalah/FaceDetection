@@ -11,10 +11,10 @@ cap = cv2.VideoCapture(0)
 
 # Read logo and resize
 path = './filters/'
-logo = cv2.imread(path+'hats/rabbit-ears.png')
+logo = cv2.imread(path+'hats/santa_2.png')
 fromY = 0
 toY = 0
-up = 1
+up = 0
 imgToBeShown = 0
 stillImg = True
 
@@ -35,7 +35,7 @@ while cap.isOpened():
     for (leftPosX, topLeftY, width, height) in faces:
         cv2.rectangle(img, (leftPosX, topLeftY), (leftPosX +
                       width, topLeftY+height), (0, 255, 0), 3)
-        size = width - 50
+        size = width
 
         # print(leftPosX, y, width, h)
         logo = cv2.resize(logo, (size, size))
@@ -60,7 +60,9 @@ while cap.isOpened():
         roi[np.where(mask)] = 0
         roi += logo
 
-        cv2.imshow('WebCam', gray)
+        # cv2.namedWindow('KaakChaat', cv2.WINDOW_NORMAL)
+        # img2 = cv2.resize(img, (1500, 900))
+        cv2.imshow('KaakChaat', img)
         if cv2.waitKey(1) == ord('q'):
             # When everything done, release the capture
             cap.release()
@@ -86,7 +88,11 @@ while cap.isOpened():
             logo = cv2.imread(path+'hats/pig-hat.png')
         elif cv2.waitKey(1) == ord('j'):
             up = 1
-            logo = cv2.imread(path+'hats/wizzard-hat.png')
+            logo = cv2.imread(path+'hats/Lion-hat.png')
+        elif cv2.waitKey(1) == ord('k'):
+            up = 1
+            logo = cv2.imread(path+'hats/santa_2.png')
+
         elif cv2.waitKey(1) == ord('z'):
             up = 0
             logo = cv2.imread(path+'beards/long-beard.png')
