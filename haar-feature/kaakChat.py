@@ -8,13 +8,15 @@ face_cascade = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
 # Setup camera
 cap = cv2.VideoCapture(0)
 
+# setting the resizing properties
+cv2.namedWindow('kaakChaat', cv2.WINDOW_NORMAL)
 
 # Read logo and resize
 path = './filters/'
-logo = cv2.imread(path+'hats/santa_2.png')
+logo = cv2.imread(path+'face_land_marks_filters/mouth.png')
 fromY = 0
 toY = 0
-up = 0
+up = 1
 imgToBeShown = 0
 stillImg = True
 
@@ -60,9 +62,12 @@ while cap.isOpened():
         roi[np.where(mask)] = 0
         roi += logo
 
+        # showing the image.
         # cv2.namedWindow('KaakChaat', cv2.WINDOW_NORMAL)
         # img2 = cv2.resize(img, (1500, 900))
         cv2.imshow('KaakChaat', img)
+
+        # changing the filter depending on the key pressed.
         if cv2.waitKey(1) == ord('q'):
             # When everything done, release the capture
             cap.release()
