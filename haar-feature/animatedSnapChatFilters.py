@@ -463,90 +463,104 @@ if face_mesh_results.multi_face_landmarks:
 
 
 # now we can define a function which takes a filter over a given image
-def applyFilter(image, filter, face_land_marks, face_part, INDCIES, display=True):
+def overlay(image, filter_img, face_landmarks, face_part, INDEXES, display=True):
     '''
-        This function will overlay a filter image over a face part of a person in the image/frame
-        Args: 
-            image: the image to apply the filter on
-            filter: the filter image to apply
-            face_land_marks: the face landmarks of the image
-            face_part: the face part to apply the filter on
-            INDCIES: the indices of the face part
-            display: bool value that if True we display an image and returns nothing but if false we returns
-                     the output image and the status
+    This function will overlay a filter image over a face part of a person in the image/frame.
+    Args:
+        image:          The image of a person on which the filter image will be overlayed.
+        filter_img:     The filter image that is needed to be overlayed on the image of the person.
+        face_landmarks: The facial landmarks of the person in the image.
+        face_part:      The name of the face part on which the filter image will be overlayed.
+        INDEXES:        The indexes of landmarks of the face part.
+        display:        A boolean value that is if set to true the function displays 
+                        the annotated image and returns nothing.
+    Returns:
+        annotated_image: The image with the overlayed filter on the top of the specified face part.
     '''
-    # now we can start by copying the image as usuall
-    filtered_image = image.copy()
-    # this may result in an exception so lets put it in a try catch block
+
+    # Create a copy of the image to overlay filter image on.
+    annotated_image = image.copy()
+
+    # Errors can come when it resizes the filter image to a too small or a too large size .
+    # So use a try block to avoid application crashing.
     try:
 
-        # get the filter width and height
-        filter_height, filter_width, _ = filter.shape
+        # Get the width and height of filter image.
+        filter_img_height, filter_img_width, _ = filter_img.shape
 
-        # get the height of the face part on which we will apply the filter
-        _, face_height, landmarks = getSize(image, face_land_marks, INDCIES)
+        # Get the height of the face part on which we will overlay the filter image.
+        _, face_part_height, landmarks = getSize(
+            image, face_landmarks, INDEXES)
 
-        # specify the height to which the filter image is required to be resized
-        required_height = int(face_height * 2.5)
+        # Specify the height to which the filter image is required to be resized.
+        required_height = int(face_part_height*2.5)
 
-        # resize the filter image
-        resized_filter_img = cv2.resize(
-            filter, (int(filter_width * (required_height / filter_height)), required_height))
+        # Resize the filter image to the required height, while keeping the aspect ratio constant.
+        resized_filter_img = cv2.resize(filter_img, (int(filter_img_width *
+                                                         (required_height/filter_img_height)),
+                                                     required_height))
 
-        # get the new width and height of the resized filter image
-        filter_height, filter_width, _ = resized_filter_img.shape
+        # Get the new width and height of filter image.
+        filter_img_height, filter_img_width, _ = resized_filter_img.shape
 
-        # convert the image into grey scale to be able to apply a threshold
-        _, filter_img_mask = cv2.threshold(cv2.cvtColor(
-            resized_filter_img, cv2.COLOR_BGR2GRAY), 25, 255, cv2.threshold_BINARY_INV)
+        # Convert the image to grayscale and apply the threshold to get the mask image.
+        _, filter_img_mask = cv2.threshold(cv2.cvtColor(resized_filter_img, cv2.COLOR_BGR2GRAY),
+                                           25, 255, cv2.THRESH_BINARY_INV)
 
-        # get the center of the face part
-        center = landmarks.mean(axis=0).astype('int')
+        # Calculate the center of the face part.
+        center = landmarks.mean(axis=0).astype("int")
 
-        # check if the face part is mouth
+        # Check if the face part is mouth.
         if face_part == 'MOUTH':
-            # Calculate the location where the smoke filter will be replaced
-            location = (int(center[0] - filter_width / 3), int(center[1]))
 
-        # if the face part is an eye
+            # Calculate the location where the smoke filter will be placed.
+            location = (int(center[0] - filter_img_width / 3), int(center[1]))
+
+        # Otherwise if the face part is an eye.
         else:
-            # Calculate the location where the eye filter image will be placed
-            location = (int(center[0] - filter_width / 2),
-                        int(center[1]-filter_height / 2))
 
-        # Retrieve the regions of interest from the image where the filter image will be placed
-        region_of_interest = image[location[1]:location[1] +
-                                   filter_height, location[0]:location[0] + filter_width]
+            # Calculate the location where the eye filter image will be placed.
+            location = (int(center[0]-filter_img_width/2),
+                        int(center[1]-filter_img_height/2))
 
-        # perform a bitwise and operation which will set the pixels of the filter image to 0 where the mask is 0
-        resultant_image = cv2.bitwise_and(
-            region_of_interest, region_of_interest, mask=filter_img_mask)
+        # Retrieve the region of interest from the image where the filter image will be placed.
+        ROI = image[location[1]: location[1] + filter_img_height,
+                    location[0]: location[0] + filter_img_width]
 
-        # add the resultant image to the resized filter which will update the resultant image
-        # with the filter image to show the item we want.
+        # Perform Bitwise-AND operation. This will set the pixel values of the region where,
+        # filter image will be placed to zero.
+        resultant_image = cv2.bitwise_and(ROI, ROI, mask=filter_img_mask)
+
+        # Add the resultant image and the resized filter image.
+        # This will update the pixel values of the resultant image at the indexes where
+        # pixel values are zero, to the pixel values of the filter image.
         resultant_image = cv2.add(resultant_image, resized_filter_img)
 
-        # update the image's region of interest with the resultant image
-        filtered_image[location[1]:location[1] + filter_height,
-                       location[0]:location[0] + filter_width] = resultant_image
+        # Update the image's region of interest with resultant image.
+        annotated_image[location[1]: location[1] + filter_img_height,
+                        location[0]: location[0] + filter_img_width] = resultant_image
 
-    # Catch the exception
+    # Catch and handle the error(s).
     except Exception as e:
         pass
 
-    # check if we need to display the image
+    # Check if the annotated image is specified to be displayed.
     if display:
-        # Display the image
-        plt.figure(figsize=(5, 5))
-        plt.imshow(filtered_image[:, :, ::-1])
-        plt.title('Output image')
-        plt.axis('off')
-        plt.show()
-    else:  # other wise just return the filtered image.
-        return filtered_image
 
+        # Display the annotated image.
+        plt.figure(figsize=[10, 10])
+        plt.imshow(annotated_image[:, :, ::-1])
+        plt.title("Output Image")
+        plt.axis('off')
+
+    # Otherwise
+    else:
+
+        # Return the annotated image.
+        return annotated_image
 
 # now after we finished the function lets try this on the web cam
+
 
 # Inizializ the video capture
 camera_video = cv2.VideoCapture(0)
@@ -595,21 +609,21 @@ while camera_video.isOpened():
             if left_eye_status[face_num] == 'Open':
 
                 # overlay the eye image
-                frame = applyFilter(frame, left_eye, face_landmarks,
-                                    'LEFT EYE', mp_face_mesh.FACEMESH_LEFT_EYE, display=False)
+                frame = overlay(frame, left_eye, face_landmarks,
+                                'LEFT EYE', mp_face_mesh.FACEMESH_LEFT_EYE, display=False)
             # check if the left eye is open
             if right_eye_status[face_num] == 'Open':
 
                 # overlay the eye image
-                frame = applyFilter(frame, right_eye, face_landmarks,
-                                    'RIGHT EYE', mp_face_mesh.FACEMESH_RIGHT_EYE, display=False)
+                frame = overlay(frame, right_eye, face_landmarks,
+                                'RIGHT EYE', mp_face_mesh.FACEMESH_RIGHT_EYE, display=False)
 
             # check if the left eye is open
             if mouth_status[face_num] == 'Open':
 
                 # overlay the eye image
-                frame = applyFilter(frame, mouth, face_landmarks,
-                                    'MOUTH', mp_face_mesh.FACEMESH_LIPS, display=False)
+                frame = overlay(frame, mouth, face_landmarks,
+                                'MOUTH', mp_face_mesh.FACEMESH_LIPS, display=False)
     cv2.imshow("KAAKCHAT", frame)
 
     # check if the user pressed the escape key
