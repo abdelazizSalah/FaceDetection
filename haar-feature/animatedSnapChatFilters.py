@@ -4,8 +4,8 @@
 
 
 import cv2
-import itertools
 import numpy as np
+import itertools
 from time import time
 import mediapipe as mp
 import matplotlib.pyplot as plt
@@ -71,7 +71,7 @@ if face_detection_results.detections:
         mp_drawing.draw_detection(image=img_copy, detection=face, keypoint_drawing_spec=mp_drawing.DrawingSpec(
             color=(0, 0, 255), thickness=2, circle_radius=2),)
 # specify the image size
-fig = plt.figure(figsize=(10, 10))
+# fig = plt.figure(figsize=(10, 10))
 
 # Display the image
 # plt.title('MyImage')
@@ -180,7 +180,7 @@ if face_mesh_results.multi_face_landmarks:
                                   landmark_drawing_spec=None, connection_drawing_spec=mp_drawing_styles.get_default_face_mesh_contours_style())
 
 # specify the image size
-fig = plt.figure(figsize=(10, 10))
+# fig = plt.figure(figsize=(10, 10))
 
 # Display the image
 # plt.title('MyImage')
@@ -463,19 +463,19 @@ if face_mesh_results.multi_face_landmarks:
 
 
 # now we can define a function which takes a filter over a given image
-def overlay(image, filter_img, face_landmarks, face_part, INDEXES, display=True):
+def overlay(image, filter_img, face_landmarks, face_part, INDEXES, display=True, isOval=False, isHat=False, isBeard=False, isEye=False, isMouth=False):
     '''
-    This function will overlay a filter image over a face part of a person in the image/frame.
-    Args:
-        image:          The image of a person on which the filter image will be overlayed.
-        filter_img:     The filter image that is needed to be overlayed on the image of the person.
-        face_landmarks: The facial landmarks of the person in the image.
-        face_part:      The name of the face part on which the filter image will be overlayed.
-        INDEXES:        The indexes of landmarks of the face part.
-        display:        A boolean value that is if set to true the function displays 
-                        the annotated image and returns nothing.
-    Returns:
-        annotated_image: The image with the overlayed filter on the top of the specified face part.
+        This function will overlay a filter image over a face part of a person in the image/frame.
+        Args:
+            image:          The image of a person on which the filter image will be overlayed.
+            filter_img:     The filter image that is needed to be overlayed on the image of the person.
+            face_landmarks: The facial landmarks of the person in the image.
+            face_part:      The name of the face part on which the filter image will be overlayed.
+            INDEXES:        The indexes of landmarks of the face part.
+            display:        A boolean value that is if set to true the function displays 
+                            the annotated image and returns nothing.
+        Returns:
+            annotated_image: The image with the overlayed filter on the top of the specified face part.
     '''
 
     # Create a copy of the image to overlay filter image on.
@@ -493,7 +493,16 @@ def overlay(image, filter_img, face_landmarks, face_part, INDEXES, display=True)
             image, face_landmarks, INDEXES)
 
         # Specify the height to which the filter image is required to be resized.
-        required_height = int(face_part_height*2.5)
+        if isBeard:
+            multiplicationFactor = 0.3
+        elif isEye or isMouth:
+            multiplicationFactor = 4
+        elif (isOval or isHat) and not isBeard:
+            multiplicationFactor = 1.25
+
+        required_height = int(face_part_height * multiplicationFactor)
+        # required_height = int(80)
+        print(multiplicationFactor, face_part_height)
 
         # Resize the filter image to the required height, while keeping the aspect ratio constant.
         resized_filter_img = cv2.resize(filter_img, (int(filter_img_width *
@@ -517,11 +526,23 @@ def overlay(image, filter_img, face_landmarks, face_part, INDEXES, display=True)
             location = (int(center[0] - filter_img_width / 3), int(center[1]))
 
         # Otherwise if the face part is an eye.
-        else:
+        elif face_part == 'LEFT EYE' or face_part == 'RIGHT EYE':
 
             # Calculate the location where the eye filter image will be placed.
             location = (int(center[0]-filter_img_width/2),
                         int(center[1]-filter_img_height/2))
+
+        elif face_part == 'OVAL':
+            # Calculate the location where the oval filter image will be placed.
+            if isHat:
+                location = (int(center[0]-filter_img_width/2),
+                            int(center[1]-filter_img_height - 100))
+            elif isBeard:
+                location = (int(center[0]-filter_img_width/2),
+                            int(center[1]-filter_img_height + 200))
+            elif isOval:
+                location = (int(center[0]-filter_img_width/2),
+                            int(center[1]-filter_img_height/2))
 
         # Retrieve the region of interest from the image where the filter image will be placed.
         ROI = image[location[1]: location[1] + filter_img_height,
@@ -559,24 +580,43 @@ def overlay(image, filter_img, face_landmarks, face_part, INDEXES, display=True)
         # Return the annotated image.
         return annotated_image
 
+
 # now after we finished the function lets try this on the web cam
-
-
 # Inizializ the video capture
 camera_video = cv2.VideoCapture(0)
 camera_video.set(3, 1280)
 camera_video.set(4, 960)
 
-
 # create named window
 cv2.namedWindow("KAAKCHAT", cv2.WINDOW_NORMAL)
 
 # read the left and right eyes
-left_eye = cv2.imread('./filters/face_land_marks_filters/Eye.png')
-right_eye = cv2.imread('./filters/face_land_marks_filters/Eye.png')
+left_eye = cv2.imread('./filters/face_land_marks_filters/orangeEye.png')
+right_eye = cv2.imread('./filters/face_land_marks_filters/orangeEye.png')
 
 # read the mouth filter
-mouth = cv2.imread('./filters/face_land_marks_filters/mouth.png')
+mouth = cv2.imread('./filters/face_land_marks_filters/cup.png')
+
+# reat the oval filter
+oval = cv2.imread('./filters/Faces/kindFace.png')
+
+# show oval
+showOval = False
+
+# show hat
+showHat = False
+
+# show hat
+showBeard = False
+
+# show mouth
+showMouth = False
+
+# show eyes
+showEyes = False
+
+# animate Mouth
+animateMouth = True
 
 # iterate until the webcam is closed
 while camera_video.isOpened():
@@ -605,30 +645,256 @@ while camera_video.isOpened():
 
         # iterate over the found faces.
         for face_num, face_landmarks in enumerate(face_mesh_results.multi_face_landmarks):
-            # check if the left eye is open
-            if left_eye_status[face_num] == 'Open':
+            if not showOval:
+                # check if the left eye is open
+                if left_eye_status[face_num] == 'Open':
 
-                # overlay the eye image
-                frame = overlay(frame, left_eye, face_landmarks,
-                                'LEFT EYE', mp_face_mesh.FACEMESH_LEFT_EYE, display=False)
-            # check if the left eye is open
-            if right_eye_status[face_num] == 'Open':
+                    # overlay the eye image
+                    frame = overlay(frame, left_eye, face_landmarks,
+                                    'LEFT EYE', mp_face_mesh.FACEMESH_LEFT_EYE, display=False, isOval=showOval, isHat=showHat, isBeard=showBeard, isEye=showEyes, isMouth=showMouth, )
+                # check if the left eye is open
+                if right_eye_status[face_num] == 'Open':
 
-                # overlay the eye image
-                frame = overlay(frame, right_eye, face_landmarks,
-                                'RIGHT EYE', mp_face_mesh.FACEMESH_RIGHT_EYE, display=False)
+                    # overlay the eye image
+                    frame = overlay(frame, right_eye, face_landmarks,
+                                    'RIGHT EYE', mp_face_mesh.FACEMESH_RIGHT_EYE, display=False, isOval=showOval, isHat=showHat, isBeard=showBeard, isEye=showEyes, isMouth=showMouth, )
 
-            # check if the left eye is open
-            if mouth_status[face_num] == 'Open':
+                # check if the left eye is open
+                if mouth_status[face_num] == 'Open' and animateMouth:
 
-                # overlay the eye image
-                frame = overlay(frame, mouth, face_landmarks,
-                                'MOUTH', mp_face_mesh.FACEMESH_LIPS, display=False)
+                    # overlay the eye image
+                    frame = overlay(frame, mouth, face_landmarks,
+                                    'MOUTH', mp_face_mesh.FACEMESH_LIPS, display=False, isOval=showOval, isHat=showHat, isBeard=showBeard, isEye=showEyes, isMouth=showMouth, )
+                elif not animateMouth:
+                    # overlay the eye image
+                    frame = overlay(frame, mouth, face_landmarks,
+                                    'MOUTH', mp_face_mesh.FACEMESH_LIPS, display=False, isOval=showOval, isHat=showHat, isBeard=showBeard, isEye=showEyes, isMouth=showMouth, )
+
+            else:
+                # applying filter on the oval
+                frame = overlay(frame, oval, face_landmarks,
+                                'OVAL', mp_face_mesh.FACEMESH_FACE_OVAL, display=False, isOval=showOval, isHat=showHat, isBeard=showBeard, isEye=showEyes, isMouth=showMouth, )
+
     cv2.imshow("KAAKCHAT", frame)
 
     # check if the user pressed the escape key
     if cv2.waitKey(1) & 0xFF == 27:
         break
+    elif cv2.waitKey(1) == ord('z'):
+
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+        left_eye = cv2.imread(
+            './filters/face_land_marks_filters/orangeEye.png')
+        right_eye = cv2.imread(
+            './filters/face_land_marks_filters/orangeEye.png')
+    elif cv2.waitKey(1) == ord('x'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        right_eye = cv2.imread('./filters/face_land_marks_filters/Eye.png')
+        left_eye = cv2.imread('./filters/face_land_marks_filters/Eye.png')
+    elif cv2.waitKey(1) == ord('c'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        right_eye = cv2.imread(
+            './filters/face_land_marks_filters/flower.png')
+        left_eye = cv2.imread(
+            './filters/face_land_marks_filters/flower.png')
+    elif cv2.waitKey(1) == ord('a'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+        animateMouth = False
+
+        mouth = cv2.imread(
+            './filters/face_land_marks_filters/mouth.png')
+    elif cv2.waitKey(1) == ord('s'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        mouth = cv2.imread(
+            './filters/face_land_marks_filters/cup.png')
+    elif cv2.waitKey(1) == ord('d'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        mouth = cv2.imread(
+            './filters/face_land_marks_filters/lolipop.png')
+    elif cv2.waitKey(1) == ord('f'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        mouth = cv2.imread(
+            './filters/face_land_marks_filters/egg.png')
+    elif cv2.waitKey(1) == ord('g'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        mouth = cv2.imread(
+            './filters/face_land_marks_filters/iceCream.png')
+    elif cv2.waitKey(1) == ord('h'):
+        showHat = False
+        showMouth = True
+        showBeard = False
+        showOval = False
+        showEyes = True
+
+        mouth = cv2.imread(
+            './filters/face_land_marks_filters/snakeTongue.png')
+    elif cv2.waitKey(1) == ord('v'):
+        showHat = False
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/Faces/catFace.png')
+    elif cv2.waitKey(1) == ord('b'):
+        showHat = False
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/Faces/kindFace.png')
+    elif cv2.waitKey(1) == ord('n'):
+        showHat = False
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/Faces/dogFace.png')
+    elif cv2.waitKey(1) == ord('m'):
+        showHat = False
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/Faces/smileFace.png')
+    elif cv2.waitKey(1) == ord(','):
+        showHat = False
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/Faces/avatar.png')
+    elif cv2.waitKey(1) == ord('.'):
+        showHat = False
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/Faces/moon.png')
+    elif cv2.waitKey(1) == ord('q'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/birthday-hat.png')
+    elif cv2.waitKey(1) == ord('w'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/chicken-hat.png')
+    elif cv2.waitKey(1) == ord('e'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/WizzardHat.png')
+    elif cv2.waitKey(1) == ord('r'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/crying-frog-hat.png')
+    elif cv2.waitKey(1) == ord('t'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/uniCorn.png')
+    elif cv2.waitKey(1) == ord('y'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/SantaHat.png')
+    elif cv2.waitKey(1) == ord('u'):
+        showHat = True
+        showMouth = False
+        showBeard = False
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/hats/frogWizzHat.png')
+    elif cv2.waitKey(1) == ord('p'):
+        showHat = False
+        showMouth = False
+        showBeard = True
+        showOval = True
+        showEyes = False
+
+        oval = cv2.imread('./filters/beards/long-beard.png')
+    elif cv2.waitKey(1) == ord('o'):
+        showHat = False
+        showMouth = False
+        showBeard = True
+        showOval = True
+        showEyes = True
+
+        oval = cv2.imread('./filters/beards/santa-beard.png')
+    elif cv2.waitKey(1) == ord('i'):
+        showHat = False
+        showMouth = False
+        showBeard = True
+        showOval = True
+        showEyes = True
+
+        oval = cv2.imread('./filters/beards/m2ashaBeard.png')
+
 
 # release the camera
 camera_video.release()
